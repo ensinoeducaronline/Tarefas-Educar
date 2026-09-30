@@ -67,11 +67,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  // Fetch registered responsibles from server (strictly excluding Mariana)
+  // Fetch registered responsibles from server (strictly excluding Mariana) with offline/Netlify support
   const loadRegisteredResponsibles = async () => {
     try {
       const res = await fetch('/api/responsibles');
-      if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
         if (Array.isArray(data.responsibles) && data.responsibles.length > 0) {
           // Exclude Mariana and ensure Átila is present
@@ -80,11 +81,28 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           );
           const list = filtered.includes('Átila') ? filtered : ['Átila', ...filtered];
           setResponsiblesList(list);
+          localStorage.setItem('educar_responsibles', JSON.stringify(list));
           return;
         }
       }
     } catch (e) {
-      console.error('Error fetching responsibles:', e);
+      console.error('Error fetching responsibles from server, using local storage:', e);
+    }
+
+    // Local storage fallback for Netlify static deployments
+    const saved = localStorage.getItem('educar_responsibles');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter(
+            (name: string) => name.trim().toLowerCase() !== 'mariana'
+          );
+          const list = filtered.includes('Átila') ? filtered : ['Átila', ...filtered];
+          setResponsiblesList(list);
+          return;
+        }
+      } catch {}
     }
     setResponsiblesList(['Átila']);
   };
@@ -154,7 +172,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     const clean = name.trim();
     if (!clean || clean.toLowerCase() === 'mariana') return;
     if (!responsiblesList.includes(clean)) {
-      setResponsiblesList((prev) => [...prev, clean]);
+      const updated = [...responsiblesList, clean];
+      setResponsiblesList(updated);
+      localStorage.setItem('educar_responsibles', JSON.stringify(updated));
     }
     setResponsible(clean);
     setIsDropdownOpen(false);
@@ -179,7 +199,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
     // Auto-register new responsible locally immediately
     if (cleanResp.toLowerCase() !== 'mariana' && !responsiblesList.includes(cleanResp)) {
-      setResponsiblesList((prev) => [...prev, cleanResp]);
+      const updated = [...responsiblesList, cleanResp];
+      setResponsiblesList(updated);
+      localStorage.setItem('educar_responsibles', JSON.stringify(updated));
     }
 
     setError(null);

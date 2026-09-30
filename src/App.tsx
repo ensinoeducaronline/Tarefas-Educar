@@ -17,6 +17,7 @@ import { ToastContainer } from './components/ToastContainer';
 import { AboutModal } from './components/AboutModal';
 import { EducarLogo } from './components/EducarLogo';
 import { playNotificationSound } from './utils/audio';
+import { DEFAULT_TASKS } from './data/defaultTasks';
 import { 
   Plus, 
   RotateCw, 
@@ -106,19 +107,38 @@ export default function App() {
     }, 5000);
   }, [soundEnabled]);
 
-  // Fetch initial tasks from backend
+  // Fetch initial tasks from backend (with automatic offline / Netlify static fallback)
   const fetchTasks = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
     setIsRefreshing(true);
     try {
       const response = await fetch('/api/tasks');
-      if (!response.ok) throw new Error('Não foi possível carregar as tarefas');
-      const data = await response.json();
-      setTasks(data.tasks || []);
+      const contentType = response.headers.get('content-type') || '';
+      if (response.ok && contentType.includes('application/json')) {
+        const data = await response.json();
+        const serverTasks = data.tasks || [];
+        setTasks(serverTasks);
+        localStorage.setItem('educar_local_tasks', JSON.stringify(serverTasks));
+        setError(null);
+        return;
+      }
+      throw new Error('Static/Netlify environment fallback');
+    } catch {
+      // Local storage fallback for Netlify static deployments
+      const cached = localStorage.getItem('educar_local_tasks');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTasks(parsed);
+            setError(null);
+            return;
+          }
+        } catch {}
+      }
+      setTasks(DEFAULT_TASKS);
+      localStorage.setItem('educar_local_tasks', JSON.stringify(DEFAULT_TASKS));
       setError(null);
-    } catch (err: any) {
-      console.error('Fetch tasks error:', err);
-      setError('Erro ao sincronizar com o servidor em nuvem.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -134,96 +154,114 @@ export default function App() {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then((res) => {
-          if (!res.ok) {
+          // Only log out if backend is running and explicitly rejects token (401 or 403)
+          if (res.status === 401 || res.status === 403) {
             handleLogout();
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          // In static hosting environments, keep logged in session
+        });
     }
   }, [fetchTasks]);
 
-  // SSE (Server-Sent Events) for real-time cloud connection
+  // SSE (Server-Sent Events) for real-time cloud connection (with graceful static hosting handling)
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
 
     const connectSSE = () => {
-      eventSource = new EventSource('/api/events');
+      try {
+        eventSource = new EventSource('/api/events');
 
-      eventSource.onopen = () => {
-        setIsConnected(true);
-      };
+        eventSource.onopen = () => {
+          setIsConnected(true);
+        };
 
-      eventSource.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          
-          if (payload.type === 'CONNECTED') {
-            setIsConnected(true);
-          } else if (payload.type === 'TASK_CREATED') {
-            const newTask: Task = payload.data.task;
-            setTasks((prev) => {
-              if (prev.some((t) => t.id === newTask.id)) return prev;
-              return [newTask, ...prev];
-            });
-            pushNotification({
-              title: 'Nova Tarefa Criada',
-              message: payload.data.message || `Tarefa cadastrada: ${newTask.description}`,
-              type: 'create',
-              taskId: newTask.id
-            });
-          } else if (payload.type === 'TASK_STATUS_CHANGED') {
-            const updatedTask: Task = payload.data.task;
-            setTasks((prev) =>
-              prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-            );
-            pushNotification({
-              title: `Tarefa movida para ${payload.data.newStatus}`,
-              message: payload.data.message || `Status alterado para ${payload.data.newStatus}`,
-              type: 'status',
-              taskId: updatedTask.id
-            });
-          } else if (payload.type === 'TASK_UPDATED') {
-            const updatedTask: Task = payload.data.task;
-            setTasks((prev) =>
-              prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-            );
-            pushNotification({
-              title: 'Tarefa Atualizada',
-              message: payload.data.message || `Tarefa atualizada: ${updatedTask.description}`,
-              type: 'update',
-              taskId: updatedTask.id
-            });
-          } else if (payload.type === 'TASK_DELETED') {
-            const taskId: string = payload.data.taskId;
-            setTasks((prev) => prev.filter((t) => t.id !== taskId));
-            pushNotification({
-              title: 'Tarefa Removida',
-              message: payload.data.message || 'Uma tarefa foi excluída pelo administrador.',
-              type: 'delete',
-              taskId
-            });
-          } else if (payload.type === 'TASKS_RESET') {
-            setTasks(payload.data.tasks);
-            pushNotification({
-              title: 'Quadro Restaurado',
-              message: payload.data.message,
-              type: 'system'
-            });
+        eventSource.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            
+            if (payload.type === 'CONNECTED') {
+              setIsConnected(true);
+            } else if (payload.type === 'TASK_CREATED') {
+              const newTask: Task = payload.data.task;
+              setTasks((prev) => {
+                if (prev.some((t) => t.id === newTask.id)) return prev;
+                const next = [newTask, ...prev];
+                localStorage.setItem('educar_local_tasks', JSON.stringify(next));
+                return next;
+              });
+              pushNotification({
+                title: 'Nova Tarefa Criada',
+                message: payload.data.message || `Tarefa cadastrada: ${newTask.description}`,
+                type: 'create',
+                taskId: newTask.id
+              });
+            } else if (payload.type === 'TASK_STATUS_CHANGED') {
+              const updatedTask: Task = payload.data.task;
+              setTasks((prev) => {
+                const next = prev.map((t) => (t.id === updatedTask.id ? updatedTask : t));
+                localStorage.setItem('educar_local_tasks', JSON.stringify(next));
+                return next;
+              });
+              pushNotification({
+                title: `Tarefa movida para ${payload.data.newStatus}`,
+                message: payload.data.message || `Status alterado para ${payload.data.newStatus}`,
+                type: 'status',
+                taskId: updatedTask.id
+              });
+            } else if (payload.type === 'TASK_UPDATED') {
+              const updatedTask: Task = payload.data.task;
+              setTasks((prev) => {
+                const next = prev.map((t) => (t.id === updatedTask.id ? updatedTask : t));
+                localStorage.setItem('educar_local_tasks', JSON.stringify(next));
+                return next;
+              });
+              pushNotification({
+                title: 'Tarefa Atualizada',
+                message: payload.data.message || `Tarefa atualizada: ${updatedTask.description}`,
+                type: 'update',
+                taskId: updatedTask.id
+              });
+            } else if (payload.type === 'TASK_DELETED') {
+              const taskId: string = payload.data.taskId;
+              setTasks((prev) => {
+                const next = prev.filter((t) => t.id !== taskId);
+                localStorage.setItem('educar_local_tasks', JSON.stringify(next));
+                return next;
+              });
+              pushNotification({
+                title: 'Tarefa Removida',
+                message: payload.data.message || 'Uma tarefa foi excluída pelo administrador.',
+                type: 'delete',
+                taskId
+              });
+            } else if (payload.type === 'TASKS_RESET') {
+              setTasks(payload.data.tasks);
+              localStorage.setItem('educar_local_tasks', JSON.stringify(payload.data.tasks));
+              pushNotification({
+                title: 'Quadro Restaurado',
+                message: payload.data.message,
+                type: 'system'
+              });
+            }
+          } catch (e) {
+            console.error('SSE message parse error:', e);
           }
-        } catch (e) {
-          console.error('SSE message parse error:', e);
-        }
-      };
+        };
 
-      eventSource.onerror = () => {
+        eventSource.onerror = () => {
+          setIsConnected(false);
+          if (eventSource) {
+            eventSource.close();
+          }
+          // In static hosting environments without SSE, retry gently after 20s
+          reconnectTimeout = setTimeout(connectSSE, 20000);
+        };
+      } catch {
         setIsConnected(false);
-        if (eventSource) {
-          eventSource.close();
-        }
-        // Attempt reconnect after 3 seconds
-        reconnectTimeout = setTimeout(connectSSE, 3000);
-      };
+      }
     };
 
     connectSSE();
@@ -259,7 +297,7 @@ export default function App() {
     });
   };
 
-  // Task Operations (Admin Only)
+  // Task Operations (Admin Only with full Netlify / offline fallback)
   const handleSaveTask = async (taskData: {
     description: string;
     level: TaskLevel;
@@ -274,35 +312,84 @@ export default function App() {
     }
 
     if (taskToEdit) {
-      // Update existing task
-      const response = await fetch(`/api/tasks/${taskToEdit.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(taskData)
+      // Update existing task locally first
+      const updatedTask: Task = {
+        ...taskToEdit,
+        description: taskData.description,
+        level: taskData.level,
+        responsible: taskData.responsible,
+        dueDate: taskData.dueDate,
+        status: taskData.status || taskToEdit.status,
+        updatedAt: new Date().toISOString()
+      };
+
+      setTasks((prev) => {
+        const next = prev.map((t) => (t.id === taskToEdit.id ? updatedTask : t));
+        localStorage.setItem('educar_local_tasks', JSON.stringify(next));
+        return next;
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Falha ao atualizar tarefa.');
-      }
+      pushNotification({
+        title: 'Tarefa Atualizada',
+        message: `Tarefa atualizada: ${updatedTask.description}`,
+        type: 'update',
+        taskId: updatedTask.id
+      });
+
       setTaskToEdit(null);
+
+      // Persist to server if available
+      try {
+        await fetch(`/api/tasks/${taskToEdit.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(taskData)
+        });
+      } catch {
+        // Saved locally in localStorage for Netlify
+      }
     } else {
-      // Create new task
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(taskData)
+      // Create new task locally first
+      const newTask: Task = {
+        id: `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        description: taskData.description,
+        level: taskData.level,
+        responsible: taskData.responsible,
+        dueDate: taskData.dueDate,
+        status: 'Pendente',
+        createdAt: taskData.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: admin?.name || 'admin'
+      };
+
+      setTasks((prev) => {
+        const next = [newTask, ...prev];
+        localStorage.setItem('educar_local_tasks', JSON.stringify(next));
+        return next;
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Falha ao criar tarefa.');
+      pushNotification({
+        title: 'Nova Tarefa Criada',
+        message: `Tarefa cadastrada: ${newTask.description}`,
+        type: 'create',
+        taskId: newTask.id
+      });
+
+      // Persist to server if available
+      try {
+        await fetch('/api/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(taskData)
+        });
+      } catch {
+        // Saved locally in localStorage for Netlify
       }
     }
   };
@@ -313,13 +400,15 @@ export default function App() {
       return;
     }
 
-    // Optimistic UI update
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-    );
+    // Optimistic & local storage update
+    setTasks((prev) => {
+      const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t));
+      localStorage.setItem('educar_local_tasks', JSON.stringify(next));
+      return next;
+    });
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}/status`, {
+      await fetch(`/api/tasks/${taskId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -327,13 +416,8 @@ export default function App() {
         },
         body: JSON.stringify({ status: newStatus })
       });
-
-      if (!response.ok) {
-        // Revert on error
-        fetchTasks(true);
-      }
     } catch {
-      fetchTasks(true);
+      // Saved locally
     }
   };
 
@@ -343,22 +427,22 @@ export default function App() {
       return;
     }
 
-    // Optimistic removal
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    // Optimistic removal & local storage update
+    setTasks((prev) => {
+      const next = prev.filter((t) => t.id !== taskId);
+      localStorage.setItem('educar_local_tasks', JSON.stringify(next));
+      return next;
+    });
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-
-      if (!response.ok) {
-        fetchTasks(true);
-      }
     } catch {
-      fetchTasks(true);
+      // Saved locally
     }
   };
 
