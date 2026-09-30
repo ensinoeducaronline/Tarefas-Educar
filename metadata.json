@@ -1,0 +1,6 @@
+{
+  "name": "Colégio Educar - Gerenciador de Tarefas",
+  "description": "Sistema de gerenciamento de tarefas em tempo real para o Colégio Educar com controle administrativo, kanban drag-and-drop e notificações.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

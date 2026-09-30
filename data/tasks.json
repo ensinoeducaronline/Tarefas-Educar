@@ -1,0 +1,90 @@
+[
+  {
+    "id": "task-1790772476969-219",
+    "description": "Organizar reunião de pais do 9º ano sobre transição para o Novo Ensino Médio",
+    "level": "Alta",
+    "responsible": "Coordenação Pedagógica",
+    "dueDate": "2026-10-14",
+    "status": "Executando",
+    "createdAt": "2026-09-30T12:47:56.969Z",
+    "updatedAt": "2026-09-30T12:48:02.458Z",
+    "createdBy": "admin"
+  },
+  {
+    "id": "task-101",
+    "description": "Elaboração e revisão das provas do Simulado Geral do Ensino Médio (1º e 2º Bimestres)",
+    "level": "Alta",
+    "responsible": "Profª. Mariana Silveira (Coordenação)",
+    "dueDate": "2026-10-08",
+    "status": "Executando",
+    "createdAt": "2026-09-27T12:47:32.494Z",
+    "updatedAt": "2026-09-29T12:47:32.494Z",
+    "createdBy": "admin"
+  },
+  {
+    "id": "task-102",
+    "description": "Planejamento e organização dos estandes da Feira de Ciências e Tecnologia Educar 2026",
+    "level": "Alta",
+    "responsible": "Prof. Carlos Eduardo & Equipe de Ciências",
+    "dueDate": "2026-10-15",
+    "status": "Pendente",
+    "createdAt": "2026-09-28T12:47:32.494Z",
+    "updatedAt": "2026-09-28T12:47:32.494Z",
+    "createdBy": "admin"
+  },
+  {
+    "id": "task-103",
+    "description": "Manutenção preventiva dos equipamentos dos Laboratórios de Informática e Robótica",
+    "level": "Média",
+    "responsible": "Roberto Mendes (TI / Suporte)",
+    "dueDate": "2026-10-05",
+    "status": "Executando",
+    "createdAt": "2026-09-26T12:47:32.494Z",
+    "updatedAt": "2026-09-29T12:47:32.494Z",
+    "createdBy": "admin"
+  },
+  {
+    "id": "task-104",
+    "description": "Envio do boletim informativo mensal aos pais e responsáveis sobre o calendário escolar",
+    "level": "Média",
+    "responsible": "Secretaria Acadêmica - Beatriz Rocha",
+    "dueDate": "2026-10-02",
+    "status": "Pendente",
+    "createdAt": "2026-09-29T12:47:32.494Z",
+    "updatedAt": "2026-09-29T12:47:32.494Z",
+    "createdBy": "admin"
+  },
+  {
+    "id": "task-105",
+    "description": "Treinamento de primeiros socorros e brigada de incêndio para equipe docente e colaboradores",
+    "level": "Baixa",
+    "responsible": "Coordenação de Segurança Escolar",
+    "dueDate": "2026-10-25",
+    "status": "Pendente",
+    "createdAt": "2026-09-25T12:47:32.494Z",
+    "updatedAt": "2026-09-25T12:47:32.494Z",
+    "createdBy": "admin"
+  },
+  {
+    "id": "task-106",
+    "description": "Reunião de alinhamento pedagógico e acolhimento dos novos alunos do Fundamental II",
+    "level": "Alta",
+    "responsible": "Diretoria Pedagógica - Helena Vasconcelos",
+    "dueDate": "2026-09-28",
+    "status": "Concluída",
+    "createdAt": "2026-09-23T12:47:32.494Z",
+    "updatedAt": "2026-09-28T12:47:32.494Z",
+    "createdBy": "admin"
+  },
+  {
+    "id": "task-107",
+    "description": "Atualização do acervo bibliográfico e catálogo digital da Biblioteca Educar",
+    "level": "Baixa",
+    "responsible": "Clara Nogueira (Bibliotecária)",
+    "dueDate": "2026-09-29",
+    "status": "Concluída",
+    "createdAt": "2026-09-22T12:47:32.494Z",
+    "updatedAt": "2026-09-29T12:47:32.494Z",
+    "createdBy": "admin"
+  }
+]
