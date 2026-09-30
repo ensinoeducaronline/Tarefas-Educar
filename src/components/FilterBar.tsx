@@ -154,7 +154,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             className="w-full py-2 px-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-[#0B3B95]"
           >
             <option value="Todos">Todos os Níveis</option>
-            <option value="Alta">🔴 Alta Prioridade</option>
+            <option value="Alta">🔴 Alta</option>
             <option value="Média">🟡 Média</option>
             <option value="Baixa">🟢 Baixa</option>
           </select>

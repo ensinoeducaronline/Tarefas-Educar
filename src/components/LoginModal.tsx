@@ -48,11 +48,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSucce
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all"
+        className="relative w-full max-w-md max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto transform transition-all"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header with Brand Gradient */}
-        <div className="bg-gradient-to-r from-[#0B3B95] to-[#08286A] p-6 text-white relative">
+        {/* Header with Brand Gradient (Fixed top) */}
+        <div className="bg-gradient-to-r from-[#0B3B95] to-[#08286A] p-6 text-white relative shrink-0">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
@@ -72,8 +72,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSucce
           </div>
         </div>
 
-        {/* Content & Form */}
-        <div className="p-6">
+        {/* Content & Form (Scrollable when needed) */}
+        <div className="p-6 flex-1 overflow-y-auto overscroll-contain">
           <div className="mb-5 p-3 rounded-xl bg-blue-50 border border-blue-100 flex items-start gap-2.5">
             <div className="w-5 h-5 text-[#0B3B95] mt-0.5 shrink-0 flex items-center justify-center">
               <Lock className="w-4 h-4" />

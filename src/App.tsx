@@ -266,6 +266,7 @@ export default function App() {
     responsible: string;
     dueDate: string;
     status?: TaskStatus;
+    createdAt?: string;
   }) => {
     if (!token) {
       setIsLoginOpen(true);

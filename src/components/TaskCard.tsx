@@ -56,6 +56,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     year: 'numeric'
   }).format(taskDate);
 
+  const formattedRegistration = task.createdAt
+    ? (() => {
+        try {
+          const d = new Date(task.createdAt);
+          if (isNaN(d.getTime())) return null;
+          return new Intl.DateTimeFormat('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }).format(d);
+        } catch {
+          return null;
+        }
+      })()
+    : null;
+
   // Level configuration
   const levelConfig: Record<TaskLevel, { badgeClass: string; label: string; icon: any }> = {
     Alta: {
@@ -182,6 +200,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             {task.responsible}
           </span>
         </div>
+
+        {/* Data de Registro Automática */}
+        {formattedRegistration && (
+          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+            <div className="w-5 h-5 rounded-md bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+              <Clock className="w-3 h-3 text-slate-400" />
+            </div>
+            <span className="truncate">
+              Registro: {formattedRegistration}
+            </span>
+          </div>
+        )}
 
         {/* Data de Entrega */}
         <div className="flex items-center justify-between">

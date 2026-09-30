@@ -18,13 +18,13 @@ export const AboutModal: React.FC<AboutModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8"
+        className="relative w-full max-w-lg max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#0B3B95] to-[#07255f] p-6 text-white relative">
+        {/* Header (Fixed top) */}
+        <div className="bg-gradient-to-r from-[#0B3B95] to-[#07255f] p-6 text-white relative shrink-0">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/10"
@@ -39,8 +39,8 @@ export const AboutModal: React.FC<AboutModalProps> = ({
           </p>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-4 text-xs text-slate-600">
+        {/* Content (Scrollable when needed) */}
+        <div className="p-6 space-y-4 text-xs text-slate-600 flex-1 overflow-y-auto overscroll-contain">
           <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200">
             <h4 className="font-bold text-slate-800 text-sm mb-1 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-[#0B3B95]" />

@@ -37,7 +37,7 @@ const INITIAL_TASKS: Task[] = [
     id: 'task-101',
     description: 'Elaboração e revisão das provas do Simulado Geral do Ensino Médio (1º e 2º Bimestres)',
     level: 'Alta',
-    responsible: 'Profª. Mariana Silveira (Coordenação)',
+    responsible: 'Átila',
     dueDate: '2026-10-08',
     status: 'Executando',
     createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
@@ -142,6 +142,59 @@ function saveTasks(tasks: Task[]) {
 
 let tasksCache: Task[] = loadTasks();
 
+// Responsibles storage configuration
+const RESPONSIBLES_FILE = path.resolve(DATA_DIR, 'responsibles.json');
+
+function loadResponsibles(): string[] {
+  let list: string[] = [];
+  try {
+    if (fs.existsSync(RESPONSIBLES_FILE)) {
+      list = JSON.parse(fs.readFileSync(RESPONSIBLES_FILE, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('Error reading responsibles file:', e);
+  }
+
+  // Strictly exclude 'Mariana' as requested by the user
+  list = list.filter((item) => item.trim().toLowerCase() !== 'mariana');
+
+  // Ensure 'Átila' is always registered and prominent
+  if (!list.includes('Átila')) {
+    list.unshift('Átila');
+  }
+
+  return Array.from(new Set(list));
+}
+
+function saveResponsibles(list: string[]) {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(RESPONSIBLES_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error saving responsibles file:', e);
+  }
+}
+
+let responsiblesCache: string[] = loadResponsibles();
+saveResponsibles(responsiblesCache);
+
+function registerResponsibleIfNew(name: string): boolean {
+  const clean = name.trim();
+  if (!clean) return false;
+  if (!responsiblesCache.includes(clean)) {
+    responsiblesCache.push(clean);
+    saveResponsibles(responsiblesCache);
+    broadcastEvent('RESPONSIBLE_ADDED', {
+      responsible: clean,
+      responsibles: responsiblesCache
+    });
+    return true;
+  }
+  return false;
+}
+
 // SSE (Server-Sent Events) clients
 interface SSEClient {
   id: number;
@@ -245,6 +298,40 @@ app.get('/api/events', (req: Request, res: Response) => {
   });
 });
 
+// Responsibles Endpoints (Public GET, Admin Write)
+app.get('/api/responsibles', (_req: Request, res: Response) => {
+  res.json({
+    responsibles: responsiblesCache,
+    total: responsiblesCache.length
+  });
+});
+
+app.post('/api/responsibles', verifyAdmin, (req: Request, res: Response) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) {
+    res.status(400).json({ error: 'Nome do responsável é obrigatório.' });
+    return;
+  }
+  const isNew = registerResponsibleIfNew(name);
+  res.status(201).json({
+    success: true,
+    isNew,
+    name: name.trim(),
+    responsibles: responsiblesCache
+  });
+});
+
+app.delete('/api/responsibles/:name', verifyAdmin, (req: Request, res: Response) => {
+  const target = decodeURIComponent(req.params.name).trim().toLowerCase();
+  responsiblesCache = responsiblesCache.filter((r) => r.trim().toLowerCase() !== target);
+  saveResponsibles(responsiblesCache);
+  broadcastEvent('RESPONSIBLE_REMOVED', {
+    removed: req.params.name,
+    responsibles: responsiblesCache
+  });
+  res.json({ success: true, responsibles: responsiblesCache });
+});
+
 // Tasks Endpoints (Public GET, Admin Write)
 app.get('/api/tasks', (_req: Request, res: Response) => {
   res.json({
@@ -255,7 +342,7 @@ app.get('/api/tasks', (_req: Request, res: Response) => {
 });
 
 app.post('/api/tasks', verifyAdmin, (req: Request, res: Response) => {
-  const { description, level, responsible, dueDate } = req.body;
+  const { description, level, responsible, dueDate, createdAt } = req.body;
 
   if (!description || !description.trim()) {
     res.status(400).json({ error: 'A Descrição da Tarefa é obrigatória.' });
@@ -274,6 +361,9 @@ app.post('/api/tasks', verifyAdmin, (req: Request, res: Response) => {
     return;
   }
 
+  // Automatically register responsible if new
+  registerResponsibleIfNew(responsible);
+
   const newTask: Task = {
     id: `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     description: description.trim(),
@@ -281,7 +371,7 @@ app.post('/api/tasks', verifyAdmin, (req: Request, res: Response) => {
     responsible: responsible.trim(),
     dueDate: dueDate.trim(),
     status: 'Pendente',
-    createdAt: new Date().toISOString(),
+    createdAt: (createdAt && typeof createdAt === 'string') ? createdAt : new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     createdBy: 'admin'
   };
@@ -310,6 +400,10 @@ app.put('/api/tasks/:id', verifyAdmin, (req: Request, res: Response) => {
 
   const current = tasksCache[index];
   const oldStatus = current.status;
+
+  if (responsible) {
+    registerResponsibleIfNew(responsible);
+  }
 
   const updated: Task = {
     ...current,

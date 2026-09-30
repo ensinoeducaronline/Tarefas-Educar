@@ -116,7 +116,7 @@ export const ListView: React.FC<ListViewProps> = ({
                     </div>
                   </td>
 
-                  {/* Data Entrega */}
+                  {/* Data Entrega e Registro */}
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-[#E25822]" />
@@ -134,6 +134,11 @@ export const ListView: React.FC<ListViewProps> = ({
                         </span>
                       )}
                     </div>
+                    {task.createdAt && (
+                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">
+                        Reg: {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(task.createdAt))}
+                      </div>
+                    )}
                   </td>
 
                   {/* Admin Actions */}
